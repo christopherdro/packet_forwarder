@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"math/big"
 	"sync"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/TheThingsNetwork/ttn/api/gateway"
 	"github.com/TheThingsNetwork/ttn/api/health"
 	"github.com/TheThingsNetwork/ttn/api/router"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -24,6 +26,10 @@ const (
 	tokenRefreshMargin = -2 * time.Minute
 	uplinksBufferSize  = 32
 )
+
+type Block struct {
+	Number *big.Int
+}
 
 type TTNConfig struct {
 	ID                  string
@@ -322,6 +328,26 @@ func (c *TTNClient) fetchAccountServerInfo() error {
 	c.tokenExpiry = gw.Token.Expiry
 	c.frequencyPlan = gw.FrequencyPlan
 	c.ctx.WithField("TokenExpiry", c.tokenExpiry).Info("Refreshed account server information")
+
+	fmt.Println("YAY!!!")
+	// Connect the client
+	// Connect the client
+	client, err := rpc.Dial("http://sandbox.asy.nc/geth")
+	if err != nil {
+		c.ctx.WithError(err).Warn("Failed connecting to Ethereum RPC.")
+	}
+
+	var lastBlock Block
+	var shhVersion string
+	err = client.Call(&lastBlock, "eth_getBlockByNumber", "earliest", true)
+	err = client.Call(&shhVersion, "shh_version", nil)
+	if err != nil {
+		c.ctx.WithError(err).Warn("Error Getting latest block")
+	}
+
+	// Print events from the subscription as they arrive.
+	fmt.Printf("Ethereum latest block: %v\n", lastBlock.Number)
+	fmt.Printf("Whisper version: %v\n", shhVersion)
 	return nil
 }
 
